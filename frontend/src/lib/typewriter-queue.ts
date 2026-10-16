@@ -1,11 +1,8 @@
 /**
- * Hàng đợi hiển thị hiệu ứng máy chữ (Typewriter queue) cho transcript trực tiếp và SSE.
- * Giúp hiển thị từ một cách mượt mà và thích ứng với tốc độ truyền mạng.
+ * Hàng đợi hiển thị hiệu ứng máy chữ (Typewriter queue) cho transcript trực tiếp.
  */
 
 export class TypewriterQueue {
-  private queue: string[] = [];
-  private isRunning: boolean = false;
   private onEmitWord: (word: string) => void;
   private speedMs: number;
 
@@ -15,35 +12,14 @@ export class TypewriterQueue {
   }
 
   enqueue(text: string): void {
-    const words = text.split(" ").filter((w) => w.length > 0);
-    this.queue.push(...words);
-    if (!this.isRunning) {
-      this.processQueue();
-    }
-  }
-
-  private processQueue(): void {
-    if (this.queue.length === 0) {
-      this.isRunning = false;
-      return;
-    }
-
-    this.isRunning = true;
-    const word = this.queue.shift();
-    if (word) {
-      this.onEmitWord(word);
-    }
-
-    // Tự động tăng tốc độ nếu hàng đợi bị ứ đọng nhiều từ
-    const adaptiveDelay = this.queue.length > 10 ? Math.max(15, this.speedMs / 2) : this.speedMs;
-
-    setTimeout(() => {
-      this.processQueue();
-    }, adaptiveDelay);
+    /**
+     * TODO: Tách từ trong chuỗi text và đẩy vào hàng đợi nhả chữ dần dần.
+     */
   }
 
   clear(): void {
-    this.queue = [];
-    this.isRunning = false;
+    /**
+     * TODO: Làm rỗng hàng đợi.
+     */
   }
 }

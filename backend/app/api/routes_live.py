@@ -1,22 +1,18 @@
-import datetime
+"""API phiên nghe trực tiếp (PT2) và WebSocket truyền âm thanh PCM."""
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, Query, WebSocket, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.database import SessionLocal, get_db
-from app.core.exceptions import GpuBusyException, NotFoundException, UnauthorizedException
-from app.core.security import generate_random_token, hash_token
-from app.models import Job, LiveSession, User, WsTicket
+from app.core.database import get_db
+from app.models import User
 from app.schemas.live import (
     LiveSessionCreateRequest,
     LiveSessionCreateResponse,
     LiveSessionDetailResponse,
     LiveSessionStopResponse,
 )
-from app.services.gpu_lock import GpuLock
 
 router = APIRouter(prefix="/api/live", tags=["live"])
 
@@ -27,39 +23,10 @@ def create_live_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session_id = uuid.uuid4()
-    gpu_lock = GpuLock(owner_id=str(session_id))
-
-    # Cố gắng lấy khóa GPU ngay lập tức
-    if not gpu_lock.acquire():
-        raise GpuBusyException()
-
-    session = LiveSession(
-        id=session_id,
-        user_id=user.id,
-        title=req.title.strip(),
-        status="capturing",
-        vocabulary=req.vocabulary,
-        num_speakers=req.num_speakers,
-        created_at=datetime.datetime.now(datetime.timezone.utc),
-    )
-    db.add(session)
-
-    # Tạo ws_ticket ngắn hạn (60 giây) để kết nối WebSocket
-    raw_ticket = generate_random_token()
-    ticket_rec = WsTicket(
-        token_hash=hash_token(raw_ticket),
-        session_id=session_id,
-        expires_at=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=60),
-    )
-    db.add(ticket_rec)
-    db.commit()
-
-    return LiveSessionCreateResponse(
-        session_id=session.id,
-        status="capturing",
-        ws_ticket=raw_ticket,
-    )
+    """Mở phiên nghe trực tiếp mới và cấp ticket WebSocket.
+    TODO: Kiểm tra GPU lock (nếu bận trả 409), tạo LiveSession và tạo ws_ticket.
+    """
+    pass
 
 
 @router.post("/sessions/{session_id}/stop", response_model=LiveSessionStopResponse)
@@ -68,19 +35,10 @@ def stop_live_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session = db.query(LiveSession).filter(LiveSession.id == session_id, LiveSession.user_id == user.id).first()
-    if not session:
-        raise NotFoundException("Phiên nghe không tồn tại.")
-
-    session.status = "stopping"
-    session.ended_at = datetime.datetime.now(datetime.timezone.utc)
-    db.commit()
-
-    return LiveSessionStopResponse(
-        session_id=session.id,
-        job_id=session.job_id,
-        status="stopping",
-    )
+    """Dừng phiên nghe trực tiếp và bắt đầu chạy pass 2 tổng hợp.
+    TODO: Chuyển trạng thái session sang stopping và kích hoạt task pass 2.
+    """
+    pass
 
 
 @router.get("/sessions/{session_id}", response_model=LiveSessionDetailResponse)
@@ -89,43 +47,15 @@ def get_live_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session = db.query(LiveSession).filter(LiveSession.id == session_id, LiveSession.user_id == user.id).first()
-    if not session:
-        raise NotFoundException("Phiên nghe không tồn tại.")
-
-    return LiveSessionDetailResponse.model_validate(session)
+    """Lấy thông tin chi tiết phiên nghe.
+    TODO: Truy vấn LiveSession theo ID.
+    """
+    pass
 
 
 @router.websocket("/ws/{session_id}")
 async def websocket_live_pcm(websocket: WebSocket, session_id: uuid.UUID, ticket: str = Query(...)):
-    """WebSocket nhận stream PCM 16kHz mono float32 từ browser cho PT2."""
-    db = SessionLocal()
-    try:
-        token_hashed = hash_token(ticket)
-        now = datetime.datetime.now(datetime.timezone.utc)
-        ticket_rec = (
-            db.query(WsTicket)
-            .filter(WsTicket.token_hash == token_hashed, WsTicket.session_id == session_id, WsTicket.expires_at > now)
-            .first()
-        )
-        if not ticket_rec:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-
-        # Xóa ticket sau khi dùng
-        db.delete(ticket_rec)
-        db.commit()
-
-        await websocket.accept()
-
-        while True:
-            # Nhận chunk nhị phân PCM float32
-            data = await websocket.receive_bytes()
-            if not data:
-                break
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
-    finally:
-        db.close()
+    """WebSocket nhận stream PCM 16kHz mono float32 từ browser cho PT2.
+    TODO: Xác thực ws_ticket, nhận các buffer float32 nhị phân và đẩy vào hàng xử lý nháp.
+    """
+    pass
