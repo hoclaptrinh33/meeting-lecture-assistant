@@ -1,0 +1,23 @@
+# Locked model specifications and Hugging Face repositories
+# Date: 2026-10-16
+# System Profile: NVIDIA GPU < 6GB VRAM (Target 4GB VRAM free, INT8)
+
+WHISPER_STANDARD_MODEL=large-v3-turbo
+WHISPER_STANDARD_REPO=mobiuslabsgmbh/faster-whisper-large-v3-turbo
+WHISPER_STANDARD_COMPUTE=int8
+WHISPER_STANDARD_BEAM=5
+
+WHISPER_DRAFT_MODEL=small
+WHISPER_DRAFT_REPO=Systran/faster-whisper-small
+WHISPER_DRAFT_COMPUTE=int8
+WHISPER_DRAFT_BEAM=1
+
+PYANNOTE_VERSION=3.3.2
+PYANNOTE_PIPELINE=pyannote/speaker-diarization-3.1
+PYANNOTE_SEGMENTATION=pyannote/segmentation-3.0
+
+VAD_MODEL=silero_vad
+VAD_SAMPLE_RATE=16000
+VAD_MIN_SPEECH_DURATION_MS=250
+VAD_MIN_SILENCE_DURATION_MS=400
+VAD_SPEECH_PAD_MS=200
